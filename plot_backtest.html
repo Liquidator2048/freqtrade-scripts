@@ -186,6 +186,8 @@
             </div>
         </div>
         <div class="col-12 text-center">
+            <button class="btn btn-danger" ng-click="restoreConfig()">Reset</button>
+            <button class="btn btn-success" ng-click="storeConfig()">Save</button>
             <button class="btn btn-primary" ng-click="startBacktest()" ng-hide="loading">Backtest</button>
             <div class="spinner" ng-show="loading">
                 <span></span>
@@ -280,9 +282,25 @@
             'pairs': []
         };
 
+        $scope.storeConfig = function () {
+            if (!('localStorage' in window)) return;
+            let jConfig = JSON.stringify($scope.config);
+            localStorage.setItem('freqtrade_backtest_config', jConfig);
+        };
+
+        $scope.restoreConfig = function () {
+            if (!('localStorage' in window)) return;
+            let jConfig = localStorage.getItem('freqtrade_backtest_config');
+            if (jConfig) {
+                $scope.config = JSON.parse(jConfig);
+            }
+        };
+        
+        $scope.restoreConfig();
         // submit configuration and get backtest result
         $scope.startBacktest = function () {
             $scope.loading = true;
+            $scope.storeConfig();
             $http({
                 method: 'POST',
                 url: '/start',

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="FreqtradeApp">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>freqtrade backtest</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        #graph {
+            min-height: 100vh;
+        }
+
+        .spinner {
+            display: flex;
+            flex-flow: row nowrap;
+            align-items: center;
+            justify-content: space-between;
+            width: 2em;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .spinner span {
+            width: 0.3em;
+            height: 1em;
+            background-color: #e4001e;
+        }
+
+        .spinner span:nth-of-type(1) {
+            animation: grow 1s -0.45s ease-in-out infinite;
+        }
+
+        .spinner span:nth-of-type(2) {
+            animation: grow 1s -0.3s ease-in-out infinite;
+        }
+
+        .spinner span:nth-of-type(3) {
+            animation: grow 1s -0.15s ease-in-out infinite;
+        }
+
+        .spinner span:nth-of-type(4) {
+            animation: grow 1s ease-in-out infinite;
+        }
+
+        @keyframes grow {
+            0%,
+            100% {
+                transform: scaleY(1);
+            }
+
+            50% {
+                transform: scaleY(2);
+            }
+        }
+
+    </style>
+
+</head>
+<body ng-controller="BacktestController">
+<header class="container-fluid">
+    <div class="row">
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="strategyInput" class="col-form-label-sm">Strategy</label>
+                <input type="text" ng-model="config.strategy" class="form-control form-control-sm" id="strategyInput"
+                       aria-describedby="strategyHelp"
+                       placeholder="Strategy name">
+                <small id="strategyHelp" class="form-text text-muted">
+                    Specify strategy class name
+                </small>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="pairInput" class="col-form-label-sm">Pair</label>
+                <input type="text" ng-model="config.pairs[0]" class="form-control form-control-sm" id="pairInput"
+                       aria-describedby="pairHelp"
+                       placeholder="Pair">
+                <small id="pairHelp" class="form-text text-muted">
+                    Show profit for this pair ( only one for now )
+                </small>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="timerangeInput" class="col-form-label-sm">Timerange</label>
+                <input type="text" ng-model="config.timerange" class="form-control form-control-sm" id="timerangeInput"
+                       aria-describedby="timerangeHelp"
+                       placeholder="Timerange">
+                <small id="timerangeHelp" class="form-text text-muted">
+                    Specify what timerange of data to use.
+                </small>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input form-control-sm" ng-model="config.refresh_pairs" type="checkbox" value=""
+                       id="refreshInput">
+                <label class="form-check-label col-form-label-sm" for="refreshInput">
+                    Refresh pairs cached
+                </label>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="indicators1Input" class="col-form-label-sm">Indicators</label>
+                <input type="text" ng-model="config.indicators1" class="form-control form-control-sm"
+                       id="indicators1Input"
+                       aria-describedby="indicators1Help"
+                       placeholder="Indicators list">
+                <small id="indicators1Help" class="form-text text-muted">
+                    Set indicators from your strategy you want in the first row of the graph.
+                    Comma-separated list.<br/>
+                    Example:<br/>
+                    `<i>ema3,ema5</i>`.<br/>
+                </small>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="indicators2Input" class="col-form-label-sm">Indicators</label>
+                <input type="text" ng-model="config.indicators2" class="form-control form-control-sm"
+                       id="indicators2Input"
+                       aria-describedby="indicators2Help"
+                       placeholder="Indicators list">
+                <small id="indicators2Help" class="form-text text-muted">
+                    Set indicators from your strategy you want in the third row of the graph. Comma-separated list.
+                    <br/>
+                    Example:<br/>
+                    `fastd,fastk`.
+                </small>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="configInput" class="col-form-label-sm">Config</label>
+                <input type="text" ng-model="config.config[0]" class="form-control form-control-sm" id="configInput"
+                       aria-describedby="configHelp"
+                       placeholder="File path">
+                <small id="configHelp" class="form-text text-muted">
+                    Specify configuration file. ( Only one for now )
+                </small>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="datadirInput" class="col-form-label-sm">Data directory</label>
+                <input type="text" ng-model="config.datadir" class="form-control form-control-sm" id="datadirInput"
+                       aria-describedby="datadirHelp"
+                       placeholder="Directory path">
+                <small id="datadirHelp" class="form-text text-muted">
+                    Path to directory with historical backtesting data.
+                </small>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="userdirInput" class="col-form-label-sm">Userdata directory</label>
+                <input type="text" ng-model="config.user_data_dir" class="form-control form-control-sm"
+                       id="userdirInput"
+                       aria-describedby="userdirHelp"
+                       placeholder="Directory path">
+                <small id="userdirHelp" class="form-text text-muted">
+                    Path to userdata directory.
+                </small>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="strategydirInput" class="col-form-label-sm">Strategy directory</label>
+                <input type="text" ng-model="config.strategy_path" class="form-control form-control-sm"
+                       id="strategydirInput"
+                       aria-describedby="strategydirHelp"
+                       placeholder="Directory path">
+                <small id="strategydirHelp" class="form-text text-muted">
+                    Specify additional strategy lookup path.
+                </small>
+            </div>
+        </div>
+        <div class="col-12 text-center">
+            <button class="btn btn-primary" ng-click="startBacktest()" ng-hide="loading">Backtest</button>
+            <div class="spinner" ng-show="loading">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+</header>
+<section class="container-fluid">
+    <div id="graph"></div>
+</section>
+<footer>
+
+</footer>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.8/angular.min.js"></script>
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<script type="text/javascript">
+    angular.module('FreqtradeApp', []);
+
+    function initializeGraph(pair, candles, markers, indicators1, indicators2) {
+        const colors = [
+            '#ff0058',
+            '#9500ff',
+            '#0026ff',
+            '#00c5ff',
+            '#47bd00',
+            '#bcbf00',
+            '#ffa400',
+            '#ff0000',
+        ];
+
+        function getColor() {
+            return colors[Math.floor(Math.random() * colors.length)]
+        }
+
+        const chart = LightweightCharts.createChart(document.getElementById('graph'));
+        chart.applyOptions({
+            watermark: {
+                color: 'rgba(11, 94, 29, 0.4)',
+                visible: true,
+                text: pair,
+                fontSize: 48,
+                horzAlign: 'center',
+                vertAlign: 'center',
+            },
+            timeScale: {
+                visible: true,
+                timeVisible: true,
+            }
+        });
+        console.log("creating candlestick series object");
+        const series = chart.addCandlestickSeries();
+        console.log("adding data to candlestick serie: ", candles);
+        series.setData(candles);
+
+        // trades and signals
+        console.log("adding markers to candlestick serie: ", markers);
+        series.setMarkers(markers);
+
+        console.log("adding indicators1 to candlestick serie: ", indicators1);
+        angular.forEach(indicators1, function (data, key) {
+            const lineSeries = chart.addLineSeries({
+                overlay: false,
+                title: key,
+                color: getColor(),
+                lineWidth: 2,
+            });
+            lineSeries.setData(data)
+        });
+
+        console.log("adding indicators2 to candlestick serie: ", indicators2);
+        angular.forEach(indicators2, function (data, key) {
+            const lineSeries = chart.addLineSeries({
+                overlay: true,
+                title: key,
+                color: getColor(),
+                lineWidth: 2,
+            });
+            lineSeries.setData(data)
+        });
+    }
+
+    angular.module('FreqtradeApp').controller('BacktestController', ['$scope', '$http', function ($scope, $http) {
+        // default config loaded at start
+        $scope.config = {
+            'strategy': 'DefaultStrategy',
+            'indicators1': 'sma,ema3,ema5',
+            'indicators2': 'macd,macdsignal',
+            'config': ['config.json'],
+            'pairs': []
+        };
+
+        // submit configuration and get backtest result
+        $scope.startBacktest = function () {
+            $scope.loading = true;
+            $http({
+                method: 'POST',
+                url: '/start',
+                data: $scope.config
+            }).then(function (response) {
+                console.log("backtest results recived");
+                $scope.loading = false;
+                $scope.data = response.data;
+                angular.forEach(response.data, function (result) {
+                    initializeGraph(
+                        result.pair,
+                        result.candles,
+                        result.markers,
+                        result.indicators1,
+                        result.indicators2
+                    );
+                });
+            }, function (response) {
+                $scope.loading = false;
+                console.error("error getting response from server:", response);
+            });
+            console.log("removing existing graph");
+            var graph = document.getElementById("graph");
+            angular.forEach(graph.childNodes, function (el, i) {
+                graph.removeChild(el);
+            });
+        };
+    }]);
+</script>
+</body>
+</html>

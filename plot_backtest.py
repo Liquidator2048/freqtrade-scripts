@@ -8,9 +8,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 import pandas as pd
-from flask import Flask, jsonify
-from flask import render_template
-from flask import request
+from flask import Flask, request, render_template, jsonify
 
 from freqtrade.data.btanalysis import extract_trades_of_period
 from freqtrade.plot.plotting import (init_plotscript)
@@ -166,6 +164,23 @@ def plot_parse_args(args: Namespace) -> Dict[str, Any]:
 
 app = Flask(__name__, template_folder=os.path.dirname(os.path.realpath(__file__)))
 
+_results = []
+
+'''
+def store_results(results: list):
+    import pickle
+    try:
+        pickle.dump(results, open("results.p", "wb"))
+    except:
+        pass
+
+def load_results() -> list:
+    import pickle
+    try:
+        return pickle.load(open("results.p", "rb"))
+    except:
+        return []
+'''
 
 @app.route('/')
 def index():
@@ -174,8 +189,15 @@ def index():
     )
 
 
+@app.route('/previous_results.json')
+def previous_results():
+    global _results
+    return jsonify(_results)
+
+
 @app.route('/start', methods=['POST'])
 def start():
+    global _results
     try:
         config = request.get_json()
         default_conf = {
@@ -200,14 +222,16 @@ def start():
         default_conf.update(config)
 
         if default_conf['refresh_pairs']:
+            # ccxt used async functions
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
         logger.info('Starting Plot Dataframe')
-        results = analyse_and_plot_pairs(
+        _results = analyse_and_plot_pairs(
             plot_parse_args(Namespace(**default_conf))
         )
-        return jsonify(results)
+        #store_results(_results)
+        return jsonify(_results)
     except Exception as e:
         logger.error(str(e))
         return jsonify({'message': str(e)}), 500
@@ -223,4 +247,5 @@ def stop():
 
 
 if __name__ == '__main__':
+    #_results = load_results()
     app.run()

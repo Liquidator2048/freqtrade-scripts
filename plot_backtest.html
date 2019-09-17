@@ -8,7 +8,11 @@
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <style>
         #graph {
-            min-height: 100vh;
+            min-height: 80vh;
+        }
+
+        #indicators2 {
+            min-height: 20vh;
         }
 
         .spinner {
@@ -185,6 +189,36 @@
                 </small>
             </div>
         </div>
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="exportfilenameInput" class="col-form-label-sm">Export filename</label>
+                <input type="text" ng-model="config.exportfilename" class="form-control form-control-sm"
+                       id="exportfilenameInput"
+                       aria-describedby="exportfilenameHelp"
+                       placeholder="path to json file">
+                <small id="exportfilenameHelp" class="form-text text-muted">
+                    Save backtest results to the file with this filename
+                    <br/>
+                    Example:<br/>
+                    `user_data/backtest_results/backtest-result.json`.
+                </small>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-2">
+            <div class="form-group">
+                <label for="exportInput" class="col-form-label-sm">Export</label>
+                <input type="text" ng-model="config.export" class="form-control form-control-sm"
+                       id="exportInput"
+                       aria-describedby="exportHelp"
+                       placeholder="trades">
+                <small id="exportHelp" class="form-text text-muted">
+                    Export backtest results, argument are: trades.
+                </small>
+            </div>
+        </div>
+
         <div class="col-12 text-center">
             <button class="btn btn-danger" ng-click="restoreConfig()">Reset</button>
             <button class="btn btn-success" ng-click="storeConfig()">Save</button>
@@ -200,6 +234,7 @@
 </header>
 <section class="container-fluid">
     <div id="graph"></div>
+    <div id="indicators2"></div>
 </section>
 <footer>
 
@@ -209,126 +244,211 @@
 <script type="text/javascript">
     angular.module('FreqtradeApp', []);
 
-    function initializeGraph(pair, candles, markers, indicators1, indicators2) {
-        const colors = [
-            '#ff0058',
-            '#9500ff',
-            '#0026ff',
-            '#00c5ff',
-            '#47bd00',
-            '#bcbf00',
-            '#ffa400',
-            '#ff0000',
-        ];
+    angular.module('FreqtradeApp')
+        .factory('LightweightChartApi', ['$rootScope', function ($rootScope) {
+            return {
+                colors: [
+                    '#ff0058',
+                    '#9500ff',
+                    '#0026ff',
+                    '#00c5ff',
+                    '#47bd00',
+                    '#bcbf00',
+                    '#ffa400',
+                    '#ff0000',
+                ],
+                getColor: function () {
+                    return this.colors[Math.floor(Math.random() * this.colors.length)];
+                },
+                initializeGraph: function (pair, candles, markers, indicators1, indicators2) {
+                    const chart = LightweightCharts.createChart(document.getElementById('graph'));
+                    chart.applyOptions({
+                        watermark: {
+                            color: 'rgba(11, 94, 29, 0.4)',
+                            visible: true,
+                            text: pair,
+                            fontSize: 48,
+                            horzAlign: 'center',
+                            vertAlign: 'center',
+                        },
+                        timeScale: {
+                            visible: true,
+                            timeVisible: true,
+                        }
+                    });
+                    console.log("creating candlestick series object");
+                    const series = chart.addCandlestickSeries();
+                    console.log("adding data to candlestick serie: ", candles);
+                    series.setData(candles);
 
-        function getColor() {
-            return colors[Math.floor(Math.random() * colors.length)]
+                    // trades and signals
+                    console.log("adding markers to candlestick serie: ", markers);
+                    series.setMarkers(markers);
+
+                    console.log("adding indicators1 to candlestick serie: ", indicators1);
+                    angular.forEach(indicators1, function (data, key) {
+                        const lineSeries = chart.addLineSeries({
+                            overlay: false,
+                            title: key,
+                            color: this.getColor(),
+                            lineWidth: 2,
+                        });
+                        lineSeries.setData(data)
+                    }.bind(this));
+
+                    chart.subscribeVisibleTimeRangeChange(function (variation) {
+                        $rootScope.chart_position = variation['to'];
+                        $rootScope.$broadcast('VisibleTimeRangeChange', variation);
+                    });
+
+                    chart.subscribeCrosshairMove(function (e) {
+                        if (e.hoveredMarkerId) {
+                            // TODO: visualize marker info
+                            console.log("marker", e.hoveredMarkerId);
+                        }
+                        if (!e.seriesPrices) return;
+                        e.seriesPrices.forEach(function (price, serie) {
+                            // TODO: visualize this prices
+                            //console.log(serie.options().title, serie.priceFormatter().format(price));
+                        });
+                    });
+
+                    console.log("adding indicators2 to candlestick serie: ", indicators2);
+                    if (indicators2) {
+                        angular.forEach(indicators2, function (data, key) {
+                            const indicators2_chart = LightweightCharts.createChart(document.getElementById('indicators2'));
+                            indicators2_chart.applyOptions({
+                                watermark: {
+                                    color: 'rgba(11, 94, 29, 0.4)',
+                                    visible: true,
+                                    text: key,
+                                    fontSize: 24,
+                                    horzAlign: 'center',
+                                    vertAlign: 'center',
+                                },
+                                timeScale: {
+                                    visible: true,
+                                    timeVisible: true,
+                                }
+                            });
+
+                            const lineSeries = indicators2_chart.addLineSeries({
+                                overlay: true,
+                                title: key,
+                                color: this.getColor(),
+                                lineWidth: 2,
+                            });
+                            lineSeries.setData(data);
+
+                            // sync visible range to main graph
+                            $rootScope.$on('VisibleTimeRangeChange', function (event, variation) {
+                                indicators2_chart.timeScale().setVisibleRange(variation);
+                            });
+                        }.bind(this));
+                    }
+                },
+            };
+        }]);
+
+    angular.module('FreqtradeApp').controller('BacktestController', [
+        '$scope', '$http', 'LightweightChartApi',
+        function ($scope, $http, LightweightChartApi) {
+            // default config loaded at start
+            $scope.config = {
+                'strategy': 'DefaultStrategy',
+                'indicators1': 'sma,ema3,ema5',
+                'indicators2': 'macd,macdsignal',
+                'config': ['config.json'],
+                'pairs': [],
+                'exportfilename': 'user_data/backtest_results/backtest-result.json',
+                'export': 'trades',
+            };
+
+            $scope.storeConfig = function () {
+                if (!('localStorage' in window)) return;
+                let jConfig = JSON.stringify($scope.config);
+                localStorage.setItem('freqtrade_backtest_config', jConfig);
+            };
+
+            $scope.restoreConfig = function () {
+                if (!('localStorage' in window)) return;
+                let jConfig = localStorage.getItem('freqtrade_backtest_config');
+                if (jConfig) {
+                    $scope.config = JSON.parse(jConfig);
+                }
+            };
+
+            // load previous results
+            $scope.load = function () {
+                $scope.loading = true;
+                $scope.clean();
+                $http({url: '/previous_results.json'}).then(
+                    // success
+                    function (response) {
+                        $scope.loading = false;
+                        $scope.data = response.data;
+                        angular.forEach(response.data, function (result) {
+                            LightweightChartApi.initializeGraph(
+                                result.pair,
+                                result.candles,
+                                result.markers,
+                                result.indicators1,
+                                result.indicators2
+                            );
+                        });
+                    },
+                    // error
+                    function (response) {
+                        $scope.loading = false;
+                        console.error("error getting response from server:", response);
+                    }
+                );
+            };
+
+            $scope.clean = function () {
+                console.log("removing existing graph");
+                document.getElementById("graph").innerHTML = "";
+                document.getElementById("indicators2").innerHTML = "";
+            };
+
+            // submit configuration and get backtest result
+            $scope.startBacktest = function () {
+                $scope.loading = true;
+                $scope.storeConfig();
+                $http({
+                    method: 'POST',
+                    url: '/start',
+                    data: $scope.config
+                }).then(
+                    // success
+                    function (response) {
+                        console.log("backtest results recived");
+                        $scope.loading = false;
+                        $scope.data = response.data;
+                        angular.forEach(response.data, function (result) {
+                            LightweightChartApi.initializeGraph(
+                                result.pair,
+                                result.candles,
+                                result.markers,
+                                result.indicators1,
+                                result.indicators2
+                            );
+                        });
+                    },
+                    // error
+                    function (response) {
+                        $scope.loading = false;
+                        console.error("error getting response from server:", response);
+                    }
+                );
+                $scope.clean();
+            };
+
+            // main
+            $scope.restoreConfig();
+            $scope.load();
         }
-
-        const chart = LightweightCharts.createChart(document.getElementById('graph'));
-        chart.applyOptions({
-            watermark: {
-                color: 'rgba(11, 94, 29, 0.4)',
-                visible: true,
-                text: pair,
-                fontSize: 48,
-                horzAlign: 'center',
-                vertAlign: 'center',
-            },
-            timeScale: {
-                visible: true,
-                timeVisible: true,
-            }
-        });
-        console.log("creating candlestick series object");
-        const series = chart.addCandlestickSeries();
-        console.log("adding data to candlestick serie: ", candles);
-        series.setData(candles);
-
-        // trades and signals
-        console.log("adding markers to candlestick serie: ", markers);
-        series.setMarkers(markers);
-
-        console.log("adding indicators1 to candlestick serie: ", indicators1);
-        angular.forEach(indicators1, function (data, key) {
-            const lineSeries = chart.addLineSeries({
-                overlay: false,
-                title: key,
-                color: getColor(),
-                lineWidth: 2,
-            });
-            lineSeries.setData(data)
-        });
-
-        console.log("adding indicators2 to candlestick serie: ", indicators2);
-        angular.forEach(indicators2, function (data, key) {
-            const lineSeries = chart.addLineSeries({
-                overlay: true,
-                title: key,
-                color: getColor(),
-                lineWidth: 2,
-            });
-            lineSeries.setData(data)
-        });
-    }
-
-    angular.module('FreqtradeApp').controller('BacktestController', ['$scope', '$http', function ($scope, $http) {
-        // default config loaded at start
-        $scope.config = {
-            'strategy': 'DefaultStrategy',
-            'indicators1': 'sma,ema3,ema5',
-            'indicators2': 'macd,macdsignal',
-            'config': ['config.json'],
-            'pairs': []
-        };
-
-        $scope.storeConfig = function () {
-            if (!('localStorage' in window)) return;
-            let jConfig = JSON.stringify($scope.config);
-            localStorage.setItem('freqtrade_backtest_config', jConfig);
-        };
-
-        $scope.restoreConfig = function () {
-            if (!('localStorage' in window)) return;
-            let jConfig = localStorage.getItem('freqtrade_backtest_config');
-            if (jConfig) {
-                $scope.config = JSON.parse(jConfig);
-            }
-        };
-        
-        $scope.restoreConfig();
-        // submit configuration and get backtest result
-        $scope.startBacktest = function () {
-            $scope.loading = true;
-            $scope.storeConfig();
-            $http({
-                method: 'POST',
-                url: '/start',
-                data: $scope.config
-            }).then(function (response) {
-                console.log("backtest results recived");
-                $scope.loading = false;
-                $scope.data = response.data;
-                angular.forEach(response.data, function (result) {
-                    initializeGraph(
-                        result.pair,
-                        result.candles,
-                        result.markers,
-                        result.indicators1,
-                        result.indicators2
-                    );
-                });
-            }, function (response) {
-                $scope.loading = false;
-                console.error("error getting response from server:", response);
-            });
-            console.log("removing existing graph");
-            var graph = document.getElementById("graph");
-            angular.forEach(graph.childNodes, function (el, i) {
-                graph.removeChild(el);
-            });
-        };
-    }]);
+    ]);
 </script>
 </body>
 </html>

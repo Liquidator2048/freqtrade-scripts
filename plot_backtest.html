@@ -6,6 +6,8 @@
     <title>freqtrade backtest</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"
+          integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
     <style>
         #graph {
             min-height: 80vh;
@@ -63,8 +65,8 @@
 </head>
 <body ng-controller="BacktestController">
 <header class="container-fluid">
-    <div class="row">
 
+    <div class="row">
         <div class="col-12 col-md-2">
             <div class="form-group">
                 <label for="strategyInput" class="col-form-label-sm">Strategy</label>
@@ -119,7 +121,7 @@
                     Set indicators from your strategy you want in the first row of the graph.
                     Comma-separated list.<br/>
                     Example:<br/>
-                    `<i>ema3,ema5</i>`.<br/>
+                    `<i>ema3,ema5</i>`.
                 </small>
             </div>
         </div>
@@ -155,9 +157,19 @@
         <div class="col-12 col-md-2">
             <div class="form-group">
                 <label for="datadirInput" class="col-form-label-sm">Data directory</label>
-                <input type="text" ng-model="config.datadir" class="form-control form-control-sm" id="datadirInput"
-                       aria-describedby="datadirHelp"
-                       placeholder="Directory path">
+                <p class="input-group">
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           ng-model="config.datadir"
+                           id="datadirInput"
+                           aria-describedby="datadirHelp"
+                           placeholder="Directory path"/>
+                    <span class="input-group-btn">
+                        <button type="button" class="btn btn-default" ng-click="selectFolder('datadir')">
+                            <i class="fa fa-folder-open"></i>
+                        </button>
+                    </span>
+                </p>
                 <small id="datadirHelp" class="form-text text-muted">
                     Path to directory with historical backtesting data.
                 </small>
@@ -167,10 +179,19 @@
         <div class="col-12 col-md-2">
             <div class="form-group">
                 <label for="userdirInput" class="col-form-label-sm">Userdata directory</label>
-                <input type="text" ng-model="config.user_data_dir" class="form-control form-control-sm"
-                       id="userdirInput"
-                       aria-describedby="userdirHelp"
-                       placeholder="Directory path">
+                <p class="input-group">
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           ng-model="config.user_data_dir"
+                           id="userdirInput"
+                           aria-describedby="userdirHelp"
+                           placeholder="Directory path"/>
+                    <span class="input-group-btn">
+                        <button type="button" class="btn btn-default" ng-click="selectFolder('user_data_dir')">
+                            <i class="fa fa-folder-open"></i>
+                        </button>
+                    </span>
+                </p>
                 <small id="userdirHelp" class="form-text text-muted">
                     Path to userdata directory.
                 </small>
@@ -180,10 +201,19 @@
         <div class="col-12 col-md-2">
             <div class="form-group">
                 <label for="strategydirInput" class="col-form-label-sm">Strategy directory</label>
-                <input type="text" ng-model="config.strategy_path" class="form-control form-control-sm"
-                       id="strategydirInput"
-                       aria-describedby="strategydirHelp"
-                       placeholder="Directory path">
+                <p class="input-group">
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           ng-model="config.strategy_path"
+                           id="strategydirInput"
+                           aria-describedby="strategydirHelp"
+                           placeholder="Directory path"/>
+                    <span class="input-group-btn">
+                        <button type="button" class="btn btn-default" ng-click="selectFolder('strategy_path')">
+                            <i class="fa fa-folder-open"></i>
+                        </button>
+                    </span>
+                </p>
                 <small id="strategydirHelp" class="form-text text-muted">
                     Specify additional strategy lookup path.
                 </small>
@@ -240,11 +270,17 @@
 
 </footer>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.8/angular.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/2.5.0/ui-bootstrap-tpls.min.js"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/2.5.0/ui-bootstrap.min.js"></script> -->
 <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 <script type="text/javascript">
-    angular.module('FreqtradeApp', []);
+    angular.module('FreqtradeApp', ['ui.bootstrap']);
 
     angular.module('FreqtradeApp')
+        .config(['$uibModalProvider', function ($uibModalProvider) {
+            $uibModalProvider.options.windowClass = 'show';
+            $uibModalProvider.options.backdropClass = 'show';
+        }])
         .factory('LightweightChartApi', ['$rootScope', function ($rootScope) {
             return {
                 colors: [
@@ -260,7 +296,7 @@
                 getColor: function () {
                     return this.colors[Math.floor(Math.random() * this.colors.length)];
                 },
-                initializeGraph: function (pair, candles, markers, indicators1, indicators2) {
+                initializeGraph: function (pair, candles, markers, indicators1, indicators2, volume) {
                     const chart = LightweightCharts.createChart(document.getElementById('graph'));
                     chart.applyOptions({
                         watermark: {
@@ -297,8 +333,13 @@
                     }.bind(this));
 
                     chart.subscribeVisibleTimeRangeChange(function (variation) {
-                        $rootScope.chart_position = variation['to'];
-                        $rootScope.$broadcast('VisibleTimeRangeChange', variation);
+                        $rootScope.$broadcast('VisibleTimeRangeChange', {source: chart, variation: variation});
+                    });
+
+                    $rootScope.$on('VisibleTimeRangeChange', function (event, data) {
+                        if (data.source !== chart) {
+                            chart.timeScale().setVisibleRange(data.variation);
+                        }
                     });
 
                     chart.subscribeCrosshairMove(function (e) {
@@ -340,19 +381,44 @@
                             });
                             lineSeries.setData(data);
 
-                            // sync visible range to main graph
-                            $rootScope.$on('VisibleTimeRangeChange', function (event, variation) {
-                                indicators2_chart.timeScale().setVisibleRange(variation);
+                            indicators2_chart.subscribeVisibleTimeRangeChange(function (variation) {
+                                $rootScope.$broadcast('VisibleTimeRangeChange', {
+                                    source: indicators2_chart,
+                                    variation: variation
+                                });
                             });
+
+                            $rootScope.$on('VisibleTimeRangeChange', function (event, data) {
+                                if (data.source !== indicators2_chart) {
+                                    indicators2_chart.timeScale().setVisibleRange(data.variation);
+                                }
+                            });
+
                         }.bind(this));
+                    }
+
+                    if (angular.isDefined(volume)) {
+                        var volumeSeries = chart.addHistogramSeries({
+                            color: '#26a69a',
+                            lineWidth: 2,
+                            priceFormat: {
+                                type: 'volume',
+                            },
+                            overlay: true,
+                            scaleMargins: {
+                                top: 0.6,
+                                bottom: 0,
+                            },
+                        });
+                        volumeSeries.setData(volume);
                     }
                 },
             };
         }]);
 
     angular.module('FreqtradeApp').controller('BacktestController', [
-        '$scope', '$http', 'LightweightChartApi',
-        function ($scope, $http, LightweightChartApi) {
+        '$scope', '$http', 'LightweightChartApi', '$uibModal',
+        function ($scope, $http, LightweightChartApi, $uibModal) {
             // default config loaded at start
             $scope.config = {
                 'strategy': 'DefaultStrategy',
@@ -444,11 +510,81 @@
                 $scope.clean();
             };
 
+            $scope.selectFolder = function (varname) {
+                var modalInstance = $uibModal.open({
+                    templateUrl: 'folder_select.html',
+                    controller: 'FolderSelectorCtrl',
+                    controllerAs: '$ctrl',
+                    appendTo: angular.element(document.body),
+                    resolve: {
+                        items: function () {
+                            return $http({
+                                url: '/ls'
+                            }).then(function (response) {
+                                return response.data;
+                            });
+                        }
+                    }
+                });
+
+                modalInstance.result.then(function (selectedItem) {
+                    $scope.config[varname] = selectedItem;
+                });
+            };
+
             // main
             $scope.restoreConfig();
             $scope.load();
+
         }
     ]);
+
+    angular.module('FreqtradeApp').controller('FolderSelectorCtrl', [
+        '$uibModalInstance', '$scope', '$http', 'items',
+        function ($uibModalInstance, $scope, $http, items) {
+            $scope.items = items;
+            $scope.loading = false;
+            $scope.select = function ($event, dir) {
+                $event.preventDefault();
+                $scope.selected = dir;
+                $scope.loading = true;
+                $http({
+                    url: '/ls',
+                    params: {'dir': dir}
+                }).then(function (response) {
+                    $scope.items = response.data;
+                });
+            };
+            $scope.confirm = function () {
+                $uibModalInstance.close($scope.selected);
+            };
+            $scope.cancel = function () {
+                $uibModalInstance.dismiss('cancel');
+            };
+        }
+    ]);
+</script>
+<script type="text/ng-template" id="folder_select.html">
+    <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Folder selection</h3>
+    </div>
+    <div class="modal-body" id="modal-body">
+        <div class="col-12">
+            <div class="form-group">
+                <input type="text" ng-model="selected" class="form-control form-control-sm"
+                       placeholder="directory">
+            </div>
+        </div>
+        <ul>
+            <li ng-repeat="dir in items track by dir">
+                <a href="#" ng-click="select($event, dir)">{{ dir }}</a>
+            </li>
+        </ul>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="confirm()">OK</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
 </script>
 </body>
 </html>

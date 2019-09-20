@@ -166,7 +166,7 @@ app = Flask(__name__, template_folder=os.path.dirname(os.path.realpath(__file__)
 
 _results = []
 
-'''
+
 def store_results(results: list):
     import pickle
     try:
@@ -174,13 +174,14 @@ def store_results(results: list):
     except:
         pass
 
+
 def load_results() -> list:
     import pickle
     try:
         return pickle.load(open("results.p", "rb"))
     except:
         return []
-'''
+
 
 @app.route('/')
 def index():
@@ -230,11 +231,27 @@ def start():
         _results = analyse_and_plot_pairs(
             plot_parse_args(Namespace(**default_conf))
         )
-        #store_results(_results)
+        store_results(_results)
         return jsonify(_results)
     except Exception as e:
         logger.error(str(e))
         return jsonify({'message': str(e)}), 500
+
+
+def path_join(path, *paths):
+    return os.path.relpath(os.path.join(path, *paths))
+
+
+def _lsdir(directory):
+    return [path_join(directory, '..')] + [
+        path_join(directory, o) for o in os.listdir(directory)
+        if os.path.isdir(os.path.join(directory, o))
+    ]
+
+@app.route('/ls/')
+def lsdir():
+    directory = request.args.get('dir', '.')
+    return jsonify(_lsdir(directory))
 
 
 @app.route('/stop', methods=['POST'])
@@ -247,5 +264,18 @@ def stop():
 
 
 if __name__ == '__main__':
-    #_results = load_results()
-    app.run()
+    DEBUG = bool(os.getenv('DEBUG', False))
+    if DEBUG:
+        _results = load_results()
+
+    jinja_options = app.jinja_options.copy()
+    jinja_options.update(dict(
+        block_start_string='<%',
+        block_end_string='%>',
+        variable_start_string='%%',
+        variable_end_string='%%',
+        comment_start_string='<#',
+        comment_end_string='#>'
+    ))
+    app.jinja_options = jinja_options
+    app.run(debug=DEBUG)

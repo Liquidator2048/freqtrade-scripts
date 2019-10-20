@@ -222,9 +222,13 @@ angular.module('FreqtradeApp').controller('BacktestController', [
             }).then(
                 // success
                 function (response) {
-                    console.log("backtest results recived");
                     $scope.loading = false;
                     $scope.data = response.data;
+                    if (!$scope.data || $scope.data.length === 0) {
+                        $scope.error_messages.push("no data received. try to refresh cached pairs");
+                    } else {
+                        console.log("backtest results recived");
+                    }
                     angular.forEach(response.data, function (result) {
                         LightweightChartApi.initializeGraph(
                             result.pair,

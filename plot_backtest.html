@@ -255,11 +255,16 @@
             <button class="btn btn-danger" ng-click="restoreConfig()">Reset</button>
             <button class="btn btn-success" ng-click="storeConfig()">Save</button>
             <button class="btn btn-primary" ng-click="startBacktest()" ng-hide="loading">Backtest</button>
-            <div class="spinner" ng-show="loading">
+            <div class="spinner py-2" ng-show="loading">
                 <span></span>
                 <span></span>
                 <span></span>
                 <span></span>
+            </div>
+            <div ng-show="error_messages" class="py-2">
+                <div class="alert alert-danger" role="alert" ng-repeat="message in error_messages">
+                    {{ message }}
+                </div>
             </div>
         </div>
 
@@ -276,7 +281,7 @@
 <!-- scripts -->
 
 <script type="module">
-    <% include 'static/plot_backtest.js' % >
+    <% include 'static/plot_backtest.js' %>
 </script>
 
 <script type="text/ng-template" id="folder_select.html">

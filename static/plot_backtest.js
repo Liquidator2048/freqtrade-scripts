@@ -161,6 +161,8 @@ angular.module('FreqtradeApp').controller('BacktestController', [
             'export': 'trades',
         };
 
+        $scope.error_messages = [];
+
         $scope.storeConfig = function () {
             if (!('localStorage' in window)) return;
             let jConfig = JSON.stringify($scope.config);
@@ -210,6 +212,7 @@ angular.module('FreqtradeApp').controller('BacktestController', [
 
         // submit configuration and get backtest result
         $scope.startBacktest = function () {
+            $scope.error_messages = [];
             $scope.loading = true;
             $scope.storeConfig();
             $http({
@@ -236,6 +239,9 @@ angular.module('FreqtradeApp').controller('BacktestController', [
                 function (response) {
                     $scope.loading = false;
                     console.error("error getting response from server:", response);
+                    if (response.data && response.data.message) {
+                        $scope.error_messages.push(response.data.message)
+                    }
                 }
             );
             $scope.clean();

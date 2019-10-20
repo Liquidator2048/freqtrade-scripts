@@ -6,21 +6,23 @@ Lot of work still needed to make this script usefull.
 
 ![plot_dataframe](https://github.com/il-katta/freqtrade-scripts/raw/master/plot_backtest.png)
 
-Tested with `freqtrade` version `2019.8.post1`
+Tested with `freqtrade` version `2019.9`
 
 ### Install
-The only one dependency is  `freqtrade`.
+On linux, in your local freqtrade directory run:
 
+```shell script
+curl -sL https://github.com/il-katta/freqtrade-scripts/archive/master.tar.gz | tar xz -C scripts --strip-components=1
 ```
-pip install https://github.com/freqtrade/freqtrade/archive/master.zip
-```
+
+This command will download this repository into `scripts` directory.
 
 ### How to use
 
 * Run the script
 
-```bash
-python plot_backtest.py
+```shell script
+python scripts/plot_backtest.py
 ```
 
 ```
@@ -32,4 +34,4 @@ python plot_backtest.py
  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 ```
 
-* open <http://localhost:5000/> with your favorit web browser.
+* open <http://localhost:5000/> with your favorite web browser.

@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import os
-from argparse import Namespace
 from pathlib import Path
 from typing import Any, Dict
 
@@ -12,6 +11,7 @@ from flask import Flask, request, render_template, jsonify
 
 from freqtrade.data.btanalysis import extract_trades_of_period
 from freqtrade.plot.plotting import (init_plotscript)
+from freqtrade.resolvers import StrategyResolver
 from freqtrade.state import RunMode
 from freqtrade.utils import setup_utils_configuration
 
@@ -128,7 +128,7 @@ def parse_indicators(indicators):
 def analyse_and_plot_pairs(config: Dict[str, Any]):
     plot_elements = init_plotscript(config)
     trades = plot_elements['trades']
-    strategy = plot_elements["strategy"]
+    strategy = StrategyResolver(config).strategy
 
     pair_counter = 0
     plots = []
@@ -157,7 +157,7 @@ def analyse_and_plot_pairs(config: Dict[str, Any]):
     return plots
 
 
-def plot_parse_args(args: Namespace) -> Dict[str, Any]:
+def plot_parse_args(args: Dict[str, Any]) -> Dict[str, Any]:
     config = setup_utils_configuration(args, RunMode.OTHER)
     return config
 
@@ -229,11 +229,13 @@ def start():
 
         logger.info('Starting Plot Dataframe')
         _results = analyse_and_plot_pairs(
-            plot_parse_args(Namespace(**default_conf))
+            plot_parse_args(default_conf)
         )
         store_results(_results)
         return jsonify(_results)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         logger.error(str(e))
         return jsonify({'message': str(e)}), 500
 
@@ -247,6 +249,7 @@ def _lsdir(directory):
         path_join(directory, o) for o in os.listdir(directory)
         if os.path.isdir(os.path.join(directory, o))
     ]
+
 
 @app.route('/ls/')
 def lsdir():
@@ -264,7 +267,7 @@ def stop():
 
 
 if __name__ == '__main__':
-    DEBUG = bool(os.getenv('DEBUG', False))
+    DEBUG = os.getenv('DEBUG', '0').lower() in ['1', 'true', 'yes', 'y']
     if DEBUG:
         _results = load_results()
 
